@@ -89,9 +89,9 @@
                         (go lt (cons m tl) x xs)
                         (go lt (cons x tl) m xs)
 
-\func findMinTest1 : findMax (<) 2 (cons 1 (cons 3 nil)) = (1, cons 3 (cons 2 nil)) => idp
-\func findMinTest2 : findMax (<) 3 (cons 2 nil) = (2, (cons 3 nil)) => idp
-\func findMinTest3 : findMax (<) 3 nil = (3, nil) => idp
+\func findMaxTest1 : findMax (<) 2 (cons 1 (cons 3 nil)) = (3, cons 2 (cons 1 nil)) => idp
+\func findMaxTest2 : findMax (<) 2 (cons 1 nil) = (2, (cons 1 nil)) => idp
+\func findMaxTest3 : findMax (<) 1 nil = (1, nil) => idp
 
 \func sort {A : \Type} (lt : A -> A -> Bool) (l : List A) : List A => go lt nil l (l ++ l)
   \where
