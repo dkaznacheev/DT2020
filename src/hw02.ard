@@ -10,22 +10,100 @@
    if False _ e = e
 -}
 
+\func if {A : \Type} (c : Bool) (l r : A): A \elim c
+  | true => l
+  | false => r
+
 -- 2. Определите || через if.
 
-\func \infixr 2 || (x y : Bool) : Bool => {?}
+\func \infixr 2 || (x y : Bool) : Bool => if x true (if y true false)
 
 -- 3. Определите возведение в степень и факториал для натуральных чисел.
 
-\func \infixr 8 ^ (x y : Nat) => {?}
 
-\func fac (x : Nat) => {?}
+\func \infixr 8 ^ (x y : Nat) : Nat \elim y
+  | 0 => 1
+  | suc y => (x ^ y) * x
+
+\func powTest1 : 2 ^ 3 = 8 => idp
+\func powTest2 : 3 ^ 2 = 9 => idp
+
+\func fac (x : Nat) : Nat
+  | 0 => 1
+  | suc x => (suc x) * (fac x)
+
+\func facTest0 : fac 0 = 1 => idp
+\func facTest1 : fac 4 = 24 => idp
 
 -- 4. Определите mod и gcd.
+{-
+\func div (x y : Nat) => div' x x y
+ \where
+   \func div' (s x y : Nat) : Nat \elim s
+     | 0 => 0
+     | suc s => if (x < y) 0 (suc (div' s (x - y) y))
 
-\func mod (x y : Nat) => {?}
+ -}
 
-\func gcd (x y : Nat) => {?}
+\func mod (x y : Nat) => mod' x x y
+  \where
+    \func mod' (s x y : Nat) : Nat \elim s
+      | 0 => 0
+      | suc s => if (x < y) x (mod' s (x - y) y)
+
+\func modTest1 : mod 7 3 = 1 => idp
+\func modTest2 : mod 2 5 = 2 => idp
+\func modTest3 : mod 0 1 = 0 => idp
+\func modTest4 : mod 12 12 = 0 => idp
+
+\func max (x y : Nat) => if (x < y) y x
+\func min (x y : Nat) => if (x < y) x y
+
+\func gcd (x y : Nat) => gcd' (x + y + 1) x y
+  \where
+    \func gcd' (s x y : Nat) : Nat
+      | 0, _, _ => 0
+      | _, x, 0 => x
+      | (suc s), x, y => gcd' s y (mod x y)
+
+\func gcdTest1 : gcd 1 1 = 1 => idp
+\func gcdTest2 : gcd 2 4 = 2 => idp
 
 -- 5. Определите (полиморфный) reverse для списков.
+\func reverse {A : \Type} (l : List A): List A => go nil l
+  \where
+    \func go {A : \Type} (r l : List A) : List A \elim l
+      | nil => r
+      | cons x xs => go (cons x r) xs
+
+\func reverseTest1 : reverse (nil {Nat}) = nil => idp
+\func reverseTest2 : reverse (cons 1 (cons 2 (cons 3 nil))) = (cons 3 (cons 2 (cons 1 nil))) => idp
 
 -- 6. Реализуйте любой (but choose wisely) алгоритм сортировки. Функцию сравнения можно принимать в качестве аргумента.
+
+\func findMax {A : \Type} (lt : A -> A -> Bool) (h : A) (l : List A) : \Sigma A (List A) => go lt nil h l
+  \where
+    \func go {A : \Type} (lt : A -> A -> Bool) (tl : List A) (m : A) (l : List A) : \Sigma A (List A) \elim l
+      | nil => (m, tl)
+      | cons x xs => if (not (lt x m))
+                        (go lt (cons m tl) x xs)
+                        (go lt (cons x tl) m xs)
+
+\func findMinTest1 : findMax (<) 2 (cons 1 (cons 3 nil)) = (1, cons 3 (cons 2 nil)) => idp
+\func findMinTest2 : findMax (<) 3 (cons 2 nil) = (2, (cons 3 nil)) => idp
+\func findMinTest3 : findMax (<) 3 nil = (3, nil) => idp
+
+\func sort {A : \Type} (lt : A -> A -> Bool) (l : List A) : List A => go lt nil l (l ++ l)
+  \where
+    \func go {A : \Type}
+             (lt : A -> A -> Bool)
+             (s : List A)
+             (l : List A)
+             (str : List A): List A
+    \elim l, str
+      | _, nil => s
+      | nil, _ => s
+      | cons x xs, cons _ ls => \let p => findMax lt x xs \in go lt (cons p.1 s) p.2 ls
+
+\func sortTest1 : sort (<) (nil {Nat}) = nil => idp
+\func sortTest2 : sort (<) (cons 2 (cons 1 (cons 3 nil))) = (cons 1 (cons 2 (cons 3 nil))) => idp
