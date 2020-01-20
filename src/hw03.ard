@@ -1,45 +1,72 @@
 \import Utils
+\import hw02 (fac)
+\import lect03 (fileTest)
 
 -- 1. Докажите ассоциативность && и ||.
 
-\func &&-assoc (x y z : Bool) : (x && y) && z = x && (y && z) => {?}
+\func &&-assoc (x y z : Bool) : (x && y) && z = x && (y && z) \elim x, y, z
+  | true, true, true => idp
+  | true, true, false => idp
+  | true, false, _ => idp
+  | false, _, _ => idp
 
-\func ||-assoc (x y z : Bool) : (x || y) || z = x || (y || z) => {?}
+\func ||-assoc (x y z : Bool) : (x || y) || z = x || (y || z) \elim x, y, z
+  | true, _, _ => idp
+  | false, true, _ => idp
+  | false, false, true => idp
+  | false, false, false => idp
 
 -- 2. Докажите, что fac 3 равно 6.
+\func fac3=6 : (fac 3 = 6) => idp
 
 -- 3. Докажите следующие пропозициональные тавтологии.
 
 -- t1 : (P and Q -> R) -> P -> Q -> R
-\func t1 {P Q R : \Type} (f : \Sigma P Q -> R) (p : P) (q : Q) : R => {?}
+\func t1 {P Q R : \Type} (f : \Sigma P Q -> R) (p : P) (q : Q) : R => f (p, q)
 
 -- t2 : (P -> R) -> (Q -> R) -> P or Q -> R
-\func t2 {P Q R : \Type} (f : P -> R) (g : Q -> R) (h : Either P Q) : R => {?}
+\func t2 {P Q R : \Type} (f : P -> R) (g : Q -> R) (h : Either P Q) : R \elim h
+  | inl a => f a
+  | inr b => g b
 
 -- t3 : ((P -> Q -> R) -> P) -> (P -> R) -> R
-\func t3 {P Q R : \Type} (f : (P -> Q -> R) -> P) (g : P -> R) : R => {?}
+\func t3 {P Q R : \Type} (f : (P -> Q -> R) -> P) (g : P -> R) : R => g (f (\lam p q => g p))
 
 -- 4. Сформулируйте и докажите следующие пропозициональные тавтологии.
 
 -- t4 : (P -> Q -> R) -> P and Q -> R
+\func t4 {P Q R : \Type } (f : (P -> Q -> R)) (s : \Sigma P Q) : R => f s.1 s.2
+
 -- t5 : (P or Q -> P and Q) -> (P -> Q) and (Q -> P)
+\func t5 {P Q R : \Type } (f : Either P Q -> \Sigma P Q): \Sigma (P -> Q) (Q -> P) =>
+  (\lam p => (f (inl p)).2, \lam q => (f (inr q)).1)
+
 -- t6 : ((((P -> Q) -> P) -> P) -> Q) -> Q
+\func t6 {P Q R : \Type } (f : ((((P -> Q) -> P) -> P) -> Q)) : Q => f (\lam g => g (\lam p => f (\lam _ => p)))
 
 -- 5. Докажите следующие утверждения.
 
 -- s1 : Если для любого x : Nat верно P(x), то существует x : Nat для которого P(x) верно.
-\func s1 (P : Nat -> \Type) (h : \Pi (x : Nat) -> P x) : \Sigma (x : Nat) (P x) => {?}
+\func s1 (P : Nat -> \Type) (h : \Pi (x : Nat) -> P x) : \Sigma (x : Nat) (P x) => (0, h 0)
 
 -- s2 : Если не существует x : Nat такого, что верно P(x), то P(3) не верно.
-\func s2 (P : Nat -> \Type) (h : \Sigma (x : Nat) (P x) -> Empty) : P 3 -> Empty => {?}
+\func s2 (P : Nat -> \Type) (h : \Sigma (x : Nat) (P x) -> Empty) : P 3 -> Empty => \lam f => h (3, f)
 
 -- 6. Сформулируйте и докажите следующие утверждения.
 
 -- s3 : Если для всех x : Nat верно, что P(x) влечет Q(x), и существует x : Nat для которого верно P(x), то существует x : Nat для которого верно Q(x).
+\func s3 (P Q : Nat -> \Type) (f : \Pi (x : Nat) -> (P x -> Q x)) (g : \Sigma (x : Nat) (P x)) : \Sigma (x : Nat) (Q x) =>
+  (g.1, (f g.1) g.2)
 
 -- s4 : Если для всех x : Nat либо не верно P(x), либо не верно Q(x), то P(3) влечет, что Q(3) не верно.
+\func s4 (P Q : Nat -> \Type) (f : \Pi (x : Nat) -> Either (P x -> Empty) (Q x -> Empty)) : P 3 -> Q 3 -> Empty =>
+  \lam p => \case (f 3) \with {
+    | inl a => \lam q => a p
+    | inr b => b
+  }
 
 -- 7. Чему равно fileTest (в нормальной форме)? Докажите это.
+--\func fileTestTest : fileTest = (17, 1, 1, 1, 1, 1) =>
 
 -- 8. Чему равно M5.t''' (в нормальной форме)? Докажите это.
 
