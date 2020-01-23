@@ -1,4 +1,5 @@
 \import Utils
+\import hw02 (if)
 \import lect04
 
 -- 1. Напишите функцию lookup, которая принимает List A и натуральное число и возвращает элемент по заданому индексу.
@@ -11,36 +12,82 @@
   | suc x, 0 => false
   | suc x, suc y => x < y
 
-\func lookup => {?}
+\func lookup {A : \Type} (l : List A) (n : Nat) (p : T (n < length l)) : A \elim l, n
+  | nil, 0 => \case p \with {}
+  | cons x xs, 0 => x
+  | cons _ xs, suc n => lookup xs n p
 
 -- 2. Реализуйте аналоги функции replicate для vec и Vec (эта функция создает список заданной длины, состоящий из повторений данного элемента).
+\func replicate {A : \Type} (a : A) (n : Nat) : Vec A n \elim n
+  | 0 => vnil
+  | suc n => vcons a (replicate a n)
+
+\func replicate' {A : \Type} (a : A) (n : Nat) : vec A n \elim n
+  | 0 => ()
+  | suc n => (a, replicate' a n)
 
 -- 3. Реализуйте аналоги функции map для vec и Vec.
+\func map {A B : \Type} (f : (A -> B)) (n : Nat) (v : Vec A n) : Vec B n \elim n, v
+  | 0, vnil => vnil
+  | suc n, vcons a v => vcons (f a) (map f n v)
+
+\func map' {A B : \Type} (f : (A -> B)) (n : Nat) (v : vec A n) : vec B n \elim n, v
+  | 0, v => ()
+  | suc n, (x, v) => (f x, map' f n v)
 
 -- 4. Реализуйте аналоги функции zipWith для vec и Vec.
 --    Функция должна принимать вектора одинаковой длины.
+\func zipWith {A B : \Type} (n : Nat) (a : Vec A n) (b : Vec B n) : Vec (\Sigma A B) n \elim n, a, b
+  | 0, vnil, vnil => vnil
+  | suc n, vcons a as, vcons b bs => vcons (a, b) (zipWith n as bs)
+
+\func zipWith' {A B : \Type} (n : Nat) (a : vec A n) (b : vec B n) : vec (\Sigma A B) n \elim n, a, b
+  | 0, a, b => ()
+  | suc n, (a, as), (b, bs) => ((a, b), zipWith' n as bs)
 
 -- 5. Функции Fin n → A соответствуют спискам элементов A длины n.
 --    Функция, преобразующая Vec A n в Fin n → A, была реализована на лекции.
 --    Реализуйте обратную функцию.
 
-\func coin {A : \Type} {n : Nat} (f : Fin n -> A) : Vec A n => {?}
+--\func coin {A : \Type} {n : Nat} (f : Fin n -> A) : Vec A n => go vnil fzero n
+    --\where
+      --\func go {A : \Type} {n : Nat} (Vec A n) (fn : Fin n)
 
 -- 6. Определите тип матриц и ряд функций над ними.
 
-\func Mat (A : \Type) (n m : Nat) : \Type => {?}
+\func Mat (A : \Type) (n m : Nat) : \Type => Vec (Vec A m) n
 
 -- диагональная матрица с элементами e на диагонали и z на остальных позициях.
 
-\func diag {A : \Type} (z e : A) (n : Nat) : Mat A n n => {?}
+\func diag {A : \Type} (z e : A) (n : Nat) : Mat A n n => goRows z e zero n n
+  \where
+    \func goRow {A : \Type} (z e : A) (i c n : Nat) : Vec A c \elim i, c
+      | _, zero => vnil
+      | 0, suc cc => vcons e (goRow z e n cc n)
+      | suc ii, suc cc => vcons z (goRow z e ii cc n)
+    \func goRows {A : \Type} (z e : A) (i c n : Nat) : Mat A c n \elim c
+      | 0 => vnil
+      | suc cc => vcons (diag.goRow z e i n n) (goRows z e (suc i) cc n)
+
+\func diagTest1 : (diag 0 1 1 = vcons (vcons 1 vnil) vnil) => idp
+\func diagTest2 : (diag 0 1 2 = vcons (vcons 1 (vcons 0 vnil))
+                               (vcons (vcons 0 (vcons 1 vnil)) vnil)) => idp
 
 -- транспонирование матриц
 
-\func transpose {A : \Type} {n m : Nat} (M : Mat A n m) : Mat A m n => {?}
+\func transpose {A : \Type} {n m : Nat} (M : Mat A n m) : Mat A m n \elim m
+  | 0 => vnil
+  | suc n => vcons (map Head M) (transpose (map Tail M))
 
 -- сложение матриц
 
-\func matAdd {A : \Type} (add : A -> A -> A) (n m : Nat) (M N : Mat A n m) : Mat A n m => {?}
+\func matAdd {A : \Type} (add : A -> A -> A) (n m : Nat) (M N : Mat A n m) : Mat A n m \elim n
+  | 0 => vnil
+  | suc n => vcons (addRows add m (Head M) (Head N)) (matAdd add n m (Tail M) (Tail N))
+    \where
+      \func addRows {A : \Type} (add : A -> A -> A) (m : Nat) (M N : Vec A m) : Vec A m \elim m
+        | 0 => vnil
+        | suc nn => vcons (add (Head M) (Head N)) (addRows add nn (Tail M) (Tail N))
 
 -- умножение матриц
 
@@ -50,12 +97,16 @@
 -- 7. Определите тип CTree A n полных бинарных деревьев высоты ровно n, которые хранят элементы только во внутренних узлах, но не в листьях.
 --    Высота листа равна 0.
 
-\data CTree (A : \Type) (n : Nat)
+\data CTree (A : \Type) (n : Nat) \elim n
+  | 0 => cleaf A
+  | suc n => cnode (CTree A n) (CTree A n)
 
 -- 8. Определите тип Tree A n бинарных деревьев высоты не больше n, которые хранят элементы только во внутренних узлах, но не в листьях.
 --    Высота листа равна 0.
 
-\data Tree (A : \Type) (n : Nat)
+\data Tree (A : \Type) (n : Nat) \elim n
+  | 0 => leaf
+  | suc n => node A (Tree A n) (Tree A n)
 
 -- определите функцию, возвращающую высоту дерева.
 
