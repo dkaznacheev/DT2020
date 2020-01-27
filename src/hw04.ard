@@ -1,5 +1,6 @@
 \import Utils
 \import hw02 (if)
+\import lect02 (-)
 \import lect04
 
 -- 1. Напишите функцию lookup, которая принимает List A и натуральное число и возвращает элемент по заданому индексу.
@@ -27,9 +28,9 @@
   | suc n => (a, replicate' a n)
 
 -- 3. Реализуйте аналоги функции map для vec и Vec.
-\func map {A B : \Type} (f : (A -> B)) (n : Nat) (v : Vec A n) : Vec B n \elim n, v
+\func map {A B : \Type} (f : (A -> B)) {n : Nat} (v : Vec A n) : Vec B n \elim n, v
   | 0, vnil => vnil
-  | suc n, vcons a v => vcons (f a) (map f n v)
+  | suc n, vcons a v => vcons (f a) (map f v)
 
 \func map' {A B : \Type} (f : (A -> B)) (n : Nat) (v : vec A n) : vec B n \elim n, v
   | 0, v => ()
@@ -37,21 +38,29 @@
 
 -- 4. Реализуйте аналоги функции zipWith для vec и Vec.
 --    Функция должна принимать вектора одинаковой длины.
-\func zipWith {A B : \Type} (n : Nat) (a : Vec A n) (b : Vec B n) : Vec (\Sigma A B) n \elim n, a, b
+\func zipWith {A B C : \Type} (f : A -> B -> C) {n : Nat} (a : Vec A n) (b : Vec B n) : Vec C n \elim n, a, b
   | 0, vnil, vnil => vnil
-  | suc n, vcons a as, vcons b bs => vcons (a, b) (zipWith n as bs)
+  | suc n, vcons a as, vcons b bs => vcons (f a b) (zipWith f as bs)
 
-\func zipWith' {A B : \Type} (n : Nat) (a : vec A n) (b : vec B n) : vec (\Sigma A B) n \elim n, a, b
+\func zipWith' {A B C : \Type} (f : A -> B -> C) {n : Nat} (a : vec A n) (b : vec B n) : vec C n \elim n, a, b
   | 0, a, b => ()
-  | suc n, (a, as), (b, bs) => ((a, b), zipWith' n as bs)
+  | suc n, (a, as), (b, bs) => (f a b, zipWith' f as bs)
 
 -- 5. Функции Fin n → A соответствуют спискам элементов A длины n.
 --    Функция, преобразующая Vec A n в Fin n → A, была реализована на лекции.
 --    Реализуйте обратную функцию.
 
---\func coin {A : \Type} {n : Nat} (f : Fin n -> A) : Vec A n => go vnil fzero n
-    --\where
-      --\func go {A : \Type} {n : Nat} (Vec A n) (fn : Fin n)
+\func coin {A : \Type} {n : Nat} (f : Fin n -> A) : Vec A n \elim n
+  | 0 => vnil
+  | suc n => go n n f
+  \where
+    \func toFin {n : Nat} (k : Nat) : Fin (suc n) \elim n, k
+      | _, 0 => fzero
+      | 0, suc k => toFin k
+      | suc n, suc k => fsuc (toFin k)
+    \func go {A : \Type} (n k : Nat) (f : Fin (suc n) -> A) : Vec A (suc k) \elim k
+        | 0 => vcons (f fzero) vnil
+        | suc k => vcons (f (coin.toFin (suc n))) (go n k f)
 
 -- 6. Определите тип матриц и ряд функций над ними.
 
@@ -59,15 +68,9 @@
 
 -- диагональная матрица с элементами e на диагонали и z на остальных позициях.
 
-\func diag {A : \Type} (z e : A) (n : Nat) : Mat A n n => goRows z e zero n n
-  \where
-    \func goRow {A : \Type} (z e : A) (i c n : Nat) : Vec A c \elim i, c
-      | _, zero => vnil
-      | 0, suc cc => vcons e (goRow z e n cc n)
-      | suc ii, suc cc => vcons z (goRow z e ii cc n)
-    \func goRows {A : \Type} (z e : A) (i c n : Nat) : Mat A c n \elim c
-      | 0 => vnil
-      | suc cc => vcons (diag.goRow z e i n n) (goRows z e (suc i) cc n)
+\func diag {A : \Type} (z e : A) (n : Nat) : Mat A n n \elim n
+  | 0 => vnil
+  | suc n => vcons (vcons e (replicate z n)) (map (vcons z) (diag z e n))
 
 \func diagTest1 : (diag 0 1 1 = vcons (vcons 1 vnil) vnil) => idp
 \func diagTest2 : (diag 0 1 2 = vcons (vcons 1 (vcons 0 vnil))
@@ -78,6 +81,7 @@
 \func transpose {A : \Type} {n m : Nat} (M : Mat A n m) : Mat A m n \elim m
   | 0 => vnil
   | suc n => vcons (map Head M) (transpose (map Tail M))
+
 
 -- сложение матриц
 
@@ -91,8 +95,18 @@
 
 -- умножение матриц
 
+\func foldr {A B : \Type} (z : B) (f : A -> B -> B) {n : Nat} (v : Vec A n) : B \elim n
+  | 0 => z
+  | suc n => f (Head v) (foldr z f (Tail v))
+
 -- z ─ нейтральный элемент по сложению.
-\func matMul {A : \Type} (z : A) (add mul : A -> A -> A) (n m k : Nat) (M : Mat A n m) (N : Mat A m k) : Mat A n k => {?}
+\func matMul {A : \Type} (z : A) (add mul : A -> A -> A) (n m k : Nat) (M : Mat A n m) (N : Mat A m k) : Mat A n k \elim n
+  | 0 => vnil
+  | suc n => vcons (getRow z add mul (Head M) (transpose N)) (matMul z add mul n m k (Tail M) N)
+    \where
+      \func getRow {A : \Type} (z : A) (add mul : A -> A -> A) {m k : Nat} (v : Vec A m) (N : Mat A k m) : Vec A k \elim k
+        | 0 => vnil
+        | suc k => vcons (foldr z add (zipWith mul v (Head N))) (getRow z add mul  v (Tail N))
 
 -- 7. Определите тип CTree A n полных бинарных деревьев высоты ровно n, которые хранят элементы только во внутренних узлах, но не в листьях.
 --    Высота листа равна 0.
@@ -105,9 +119,16 @@
 --    Высота листа равна 0.
 
 \data Tree (A : \Type) (n : Nat) \elim n
-  | 0 => leaf
+  | _ => leaf
   | suc n => node A (Tree A n) (Tree A n)
 
 -- определите функцию, возвращающую высоту дерева.
 
-\func height {A : \Type} (n : Nat) (t : Tree A n) : Fin (suc n) => {?}
+\func height {A : \Type} (n : Nat) (t : Tree A n) : Fin (suc n) \with
+  | _, leaf => fzero
+  | suc n, node _ l r => fsuc (max (height n l) (height n r))
+    \where
+      \func max {n : Nat} (a b : Fin n) : Fin n \elim n, a, b
+        | (suc n), fsuc a, fsuc b => fsuc (max a b)
+        | suc n, fzero, b => b
+        | suc n, a, fzero => a
