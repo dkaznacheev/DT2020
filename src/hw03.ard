@@ -1,6 +1,6 @@
 \import Utils
 \import hw02 (fac)
-\import lect03 (fileTest)
+\import lect03 (M5, fileTest)
 
 -- 1. Докажите ассоциативность && и ||.
 
@@ -66,10 +66,12 @@
   }
 
 -- 7. Чему равно fileTest (в нормальной форме)? Докажите это.
---\func fileTestTest : fileTest = (17, 1, 1, 1, 1, 1) =>
+\func fileTestTest : fileTest = (17, 8, 13, 55, 18, 21) => idp
 
 -- 8. Чему равно M5.t''' (в нормальной форме)? Докажите это.
-
+\func m5t'''Test : M5.t''' = ((82, 42, 61, 82, 34, 42, 61, 29), 25, (42, 29)) => idp
 -- 9. Докажите ассоциативность ++.
 
-\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) => {?}
+\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) \elim xs, ys, zs
+  | nil, _, _ => idp
+  | cons x xs, ys, zs => pmap (cons x) (++-assoc xs ys zs)
