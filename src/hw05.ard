@@ -1,7 +1,7 @@
 \import Utils
 \import hw03
 \import hw04
-\import lect05 ()
+\import lect05 (Nat-elim, Nat-rec)
 \open Nat \hiding (<=)
 
 -- 1. Определите конгруэнтность для функций двух аргументов через transport.
@@ -63,11 +63,20 @@
   | true => false
   | false => true
 
-\func notNotId : (\lam x => not (not x)) = (\lam x => x) => {?}
+\func notNotId : (\lam x => not (not x)) = (\lam x => x) => path (\lam i x => help x @ i)
+  \where
+    \func help (x : Bool) : not (not x) = x \elim x
+      | true => idp
+      | false => idp
 
 -- 6. Определите факториал через Nat-rec.
 
+\func fac' (n : Nat) : Nat => Nat-rec Nat 1 (\lam x y => (suc x) * y) n
+
 -- 7. Докажите ассоциативность сложения для натуральных чисел через Nat-elim.
+
+\func +-assoc' (n m k : Nat) : (n + m) + k = n + (m + k) =>
+  Nat-elim (\lam x => (n + m) + x = n + (m + x)) (idp) (\lam _ x => pmap suc x) k
 
 -- 8. Определите рекурсор и элиминатор для D.
 
@@ -76,11 +85,49 @@
   | con2 D D
   | con3 (Nat -> D)
 
+\func D-elim (P : D -> \Type)
+             (c1 : \Pi (n : Nat) -> P (con1 n))
+             (c2 : \Pi (d1 d2 : D) -> P d1 -> P d2 -> P (con2 d1 d2))
+             (c3 : \Pi (f : Nat -> D) -> (\Pi (n : Nat) -> P (f n)) -> P (con3 f))
+             (d : D) : P d \elim d
+  | con1 n => c1 n
+  | con2 d1 d2 => c2 d1 d2 (D-elim P c1 c2 c3 d1) (D-elim P c1 c2 c3 d2)
+  | con3 f => c3 f (\lam n => D-elim P c1 c2 c3 (f n))
+
+\func D-rec (P : \Type)
+            (c1 : Nat -> P)
+            (c2 : D -> D -> P -> P -> P)
+            (c3 : (Nat -> D) -> (Nat -> P) -> P)
+            (d : D) : P \elim d
+  | con1 n => c1 n
+  | con2 d1 d2 => c2 d1 d2 (D-rec P c1 c2 c3 d1) (D-rec P c1 c2 c3 d2)
+  | con3 f => c3 f (\lam n => D-rec P c1 c2 c3 (f n))
+
 -- 9. Определите рекурсор и элиминатор для List.
+
+\func List-elim {A : \Type}
+                (P : List A -> \Type)
+                (nl : P nil)
+                (cns : \Pi (a : A) (l : List A) -> P l -> P (cons a l))
+                (l : List A) : P l \elim l
+  | nil => nl
+  | cons a l => cns a l (List-elim P nl cns l)
+
+\func List-rec {A : \Type}
+               (P : \Type)
+               (nl : P)
+               (cns : A -> List A -> P -> P)
+               (l : List A) : P \elim l
+  | nil => nl
+  | cons a l => cns a l (List-rec P nl cns l)
 
 -- 10. Докажите, что 0 не равно suc x.
 
-\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => {?}
+\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => transport help p ()
+  \where
+    \func help (x : Nat) : \Type \elim x
+      | 0 => \Sigma
+      | suc n => Empty
 
 -- 11. Докажите, что fac не равен suc.
 
@@ -90,7 +137,12 @@
   | 0 => 1
   | suc n => suc n * fac n
 
-\func fac/=suc (p : fac = suc) : Empty => {?}
+\func fac/=suc (p : fac = suc) : Empty => transport help p ()
+  \where
+    \func help (x : Nat -> Nat) : \Type => \case x 1 \with {
+      | 1 => \Sigma
+      | _ => Empty
+    }
 
 -- 12. Докажите, что left = right, не используя transport.
 
