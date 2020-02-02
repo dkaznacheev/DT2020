@@ -49,7 +49,7 @@
 
 \func reverse-isInvolutive {A : \Type} (xs : List A) : reverse (reverse xs) = xs \elim xs
   | nil => idp
-  | cons a xs => {?}
+  | cons a xs => reverse++ (reverse xs) (cons a nil) *> pmap (cons a) (reverse-isInvolutive xs)
 
 -- 4. Докажите дистрибутивность умножения над сложением для натуральных чисел.
 
@@ -184,10 +184,12 @@
 -- 2. Докажите, что тип \Sigma (x : A) (a = x) одноэлементный, то есть, что для любого p : \Sigma (x : A) (a = x) верно, что (x,idp) = p.
 -- 3. Используя эти две конструкции, легко определить J.
 
-\func transport'' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => {?}
+\func transport'' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' =>
+  Jalt (\lam x y _ => B x -> B y) (\lam _ x => x) p b
 
-\func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p => {?}
+\func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p \elim p
+  | (x, idp) => idp
 
 \func J' {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type)
          (b : B a idp)
-         {a' : A} (p : a = a') : B a' p => {?}
+         {a' : A} (p : a = a') : B a' p => transport'' (\lam x => B x.1 x.2) (sigma-contr (a', p)) b
