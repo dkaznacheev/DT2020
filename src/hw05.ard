@@ -53,7 +53,13 @@
 
 -- 4. Докажите дистрибутивность умножения над сложением для натуральных чисел.
 
-\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k => {?}
+\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k \elim k
+  | 0 => idp
+  | suc k => n * (m + k) + n
+      ==< pmap (\lam x => x + n) (ldistr n m k) >==
+      n * m + n * k + n
+      ==< +-assoc' (n * m) (n * k) n >==
+      n * m + (n * k + n) `qed
 
 \func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n => {?}
 
