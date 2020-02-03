@@ -1,3 +1,4 @@
+\import Prelude
 \import Utils
 \import lect05 (+-comm)
 \import lect06 \hiding (<=-refl)
@@ -67,10 +68,20 @@
 
 -- 9. Определите filter через if, а не через \case.
 --    Докажите для этой версии filter лемму filter-lem.
+\func if {A : \Type} (c : Bool) (l r : A): A \elim c
+  | true => l
+  | false => r
 
-\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A => {?}
+\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons a xs => if (p a) (cons a (filter' p xs)) (filter' p xs)
 
-\func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : length (filter' p xs) Nat.<= length xs => {?}
+\func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : length (filter' p xs) Nat.<= length xs \elim xs
+  | nil => Nat.zero<=_
+  | cons a l => \case p a \as b \return length (if (b) (cons a (filter' p l)) (filter' p l)) Nat.<= suc (length l) \with {
+    | true => Nat.suc<=suc (filter-lem p l)
+    | false => <=-helper (filter-lem p l)
+  }
 
 -- 10. Закончите определение функции \func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x из лекции.
 
@@ -90,7 +101,10 @@
 
 \func isEven (n : Nat) => \Sigma (k : Nat) (n = 2 * k)
 
-\func isEven-dec : DecPred isEven => {?}
+\func isEven-dec : DecPred isEven => \lam n => \case \elim n \with {
+  | 0 => yes (0, idp)
+  | suc n => {?}
+}
 
 -- 13. Докажите, что если равенство элементов A разрешимо, то любой список элементов A либо пуст, либо состоит из повторений одного элемента, либо в A существует два различных элемента.
 
