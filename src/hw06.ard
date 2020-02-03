@@ -5,28 +5,63 @@
 
 -- 1. Докажите, что vnil является нейтральным элементом для v++.
 
-\func vnil-rightId {A : \Type} {n : Nat} (xs : Vec A n) : transport (Vec A) (+-comm 0 n) (xs v++ vnil) = xs => {?}
+\func vnil-rightId {A : \Type} {n : Nat} (xs : Vec A n) : transport (Vec A) (+-comm 0 n) (xs v++ vnil) = xs \elim n, xs
+  | 0, vnil => idp
+  | suc n, vcons a xs => v++-assoc'.lem (xs v++ vnil) a (+-comm 0 n) *> pmap (vcons a) (vnil-rightId xs)
 
 -- 2. Определите предикат принадлежности элемента списку.
 
-\data In {A : \Type} (a : A) (xs : List A)
+\data In {A : \Type} (a : A) (xs : List A) \with
+  | a, cons b xs => in-head (a = b)
+  | a, cons _ xs => in-tail (In a xs)
+
+\func intest0 : In 0 (0 `cons` 1 `cons` nil) => in-head idp
+\func intest1 : In 0 (1 `cons` 0 `cons` nil) => in-tail (in-head idp)
 
 -- 3. Докажите эквивалентность четырех различных определений LessOrEq: lessOrEq, lessOrEq', LessOrEq и LessOrEq'.
+
+--\func le12 (n m : Nat) (l1 : lessOrEq n m) : lessOrEq' n m => \c
 
 -- 4. Определите рефлексивное транзитивное замыкание отношения.
 --    То есть ReflTransClosure R -- это минимальное рефлексивное и транзитивное отношение, содержащее R.
 
 \data ReflTransClosure {A : \Type} (R : A -> A -> \Type) (x y : A)
+  | r-cl (R x y)
+  | trans-cl (z : A) (R x z) (ReflTransClosure R z y)
 
 -- 5. Докажите, что если R уже рекфлексивно и транзитивно, то ReflTransClosure R эквивалентно R.
 
 \func ReflTransClosure-lem {A : \Type} (R : A -> A -> \Type) (refl : \Pi (x : A) -> R x x) (trans : \Pi (x y z : A) -> R x y -> R y z -> R x z)
   : \Pi (x y : A) -> R x y <-> ReflTransClosure R x y
-  => {?}
+  => \lam x y => (\lam r => r-cl r, rtc2r trans x y)
+  \where
+    \func rtc2r {A : \Type} {R : A -> A -> \Type} (trans : \Pi (x y z : A) -> R x y -> R y z -> R x z)
+                (x y : A)  (rtc : ReflTransClosure R x y) : R x y \elim rtc
+      | r-cl r => r
+      | trans-cl z rxz rzy => trans x z y rxz (rtc2r trans z y rzy)
 
 -- 6. Определите предикат Sublist xs ys на списках, означающий "список xs является подсписком ys".
 
+\data Sublist {A : \Type} (xs : List A) (ys : List A) \with
+  | nil, _ => sub-nil
+  | xs, cons _ ys => sub-suff (Sublist xs ys)
+  | cons a xs, cons b ys => sub-cons (a = b) (Sublist xs ys)
+
+\func testSublist0 : Sublist nil (0 `cons` nil) => sub-nil
+\func testSublist1 : Sublist (0 `cons` nil) (0 `cons` 1 `cons` nil) => sub-cons idp (sub-nil)
+\func testSublist2 : Sublist (0 `cons` nil) (2 `cons` 0 `cons` 1 `cons` nil) => sub-suff (sub-cons idp (sub-nil))
+
 -- 7. Докажите, что Sublist (filter xs) xs для любого списка xs.
+
+\func filterSublist {A : \Type} (p : A -> Bool) (xs : List A) : Sublist (filter p xs) xs \elim xs
+  | nil => sub-nil
+  | cons a l => \case p a \as b \return Sublist (\case b \with {
+                                                  | true => cons a (filter p l)
+                                                  | false => filter p l
+                                                } ) (cons a l) \with {
+    | true => sub-cons idp (filterSublist p l)
+    | false => sub-suff (filterSublist p l)
+  }
 
 -- 8. Реализуйте любой алгоритм сортировки, используя \case для паттерн матчинга на результате сравнения элементов списка.
 
@@ -49,7 +84,7 @@
 -- Это легко доказать при помощи исключенного третьего, но утверждение верно и без него.
 -- Докажите этот факт.
 \func contrProp {A : \Type} (p : A -> Not A) (q : Not A -> A) : Empty
-  => {?}
+  => p (q (\lam a => p a a)) (q (\lam a => p a a))
 
 -- 12. Докажите, что предикат isEven разрешим.
 
