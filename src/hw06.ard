@@ -64,6 +64,16 @@
 
 -- 8. Реализуйте любой алгоритм сортировки, используя \case для паттерн матчинга на результате сравнения элементов списка.
 
+\func sort {A : \Type} (lt : A -> A -> Ordering) (l : List A) : List A \elim l
+  | nil => nil
+  | cons a l => insert lt a (sort lt l) \where
+  \func insert {A : \Type} (lt : A -> A -> Ordering) (a : A) (l : List A) : List A \elim l
+    | nil => nil
+    | cons b l => \case lt a b \with {
+      | LT => cons a (cons b l)
+      | _ => cons b (insert lt a l)
+    }
+
 -- 9. Определите filter через if, а не через \case.
 --    Докажите для этой версии filter лемму filter-lem.
 \func if {A : \Type} (c : Bool) (l r : A): A \elim c
