@@ -1,6 +1,6 @@
 \import Prelude
 \import Utils
-\import lect05 (+-comm)
+\import lect05 (+-comm, funExt)
 \import lect06 \hiding (<=-refl)
 \open Nat(+,*)
 
@@ -20,8 +20,6 @@
 \func intest1 : In 0 (1 `cons` 0 `cons` nil) => in-tail (in-head idp)
 
 -- 3. Докажите эквивалентность четырех различных определений LessOrEq: lessOrEq, lessOrEq', LessOrEq и LessOrEq'.
-
---\func le12 (n m : Nat) (l1 : lessOrEq n m) : lessOrEq' n m => \c
 
 -- 4. Определите рефлексивное транзитивное замыкание отношения.
 --    То есть ReflTransClosure R -- это минимальное рефлексивное и транзитивное отношение, содержащее R.
@@ -84,6 +82,18 @@
   }
 
 -- 10. Закончите определение функции \func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x из лекции.
+\func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x =>
+  \case \elim x, f true \as p, idp : f true = p, f false \as q, idp : f false = q \with {
+    | true, true, g, _, _ => help f g *> pmap f g
+    | true, false, g, true, h => help f g *> pmap f h
+    | true, false, g, false, h => help f g *> pmap f h *> h *> sym g
+    | false, true, g, true, h => help f h *> pmap f g *> g *> sym h
+    | false, true, g, false, h => help f h *> pmap f h
+    | false, false, g, true, h => help f h *> pmap f g
+    | false, false, g, false, h => help f h *> pmap f h
+  }
+\where
+  \func help (f : Bool -> Bool) {a b : Bool} (g : f a = b) : f (f (f a)) = f (f b) => pmap (\lam x => f (f x)) g
 
 -- 11. Парадокс Рассела показывает, что не существует множества всех множеств.
 -- Если такое множеств существует, то мы можем определить множество B, состоящее из множеств, не содержащих себя.
@@ -101,10 +111,22 @@
 
 \func isEven (n : Nat) => \Sigma (k : Nat) (n = 2 * k)
 
-\func isEven-dec : DecPred isEven => \lam n => \case \elim n \with {
-  | 0 => yes (0, idp)
-  | suc n => {?}
+\func pred (n : Nat) : Nat \elim n
+  | 0 => 0
+  | suc n => n
+
+\func isEven-dec : DecPred isEven => \lam n => \case parity n \with {
+  | even k p => yes (k, p)
+  | odd k p => no (\lam x => \case x \with {
+    | (_, x) => help x p
+  })
 }
+\where
+  \func help {n a b : Nat} (peven : n = 2 * a) (podd : n = 2 * b + 1) : Empty \elim n, a
+    | 0, 0 => suc/=0 (sym podd)
+    | 0, suc n => suc/=0 (sym peven)
+    | suc n, 0 => suc/=0 peven
+    | suc _, suc _ => help (pmap pred podd) (pmap pred peven)
 
 -- 13. Докажите, что если равенство элементов A разрешимо, то любой список элементов A либо пуст, либо состоит из повторений одного элемента, либо в A существует два различных элемента.
 
@@ -117,8 +139,16 @@
   | repeated (n : Nat) (a : A) (p : xs = repeat n a)
   | A-is-not-trivial (a a' : A) (p : a = a' -> Empty)
 
-\func lemma {A : \Type} (xs : List A) {dec : DecEq A} : Result A xs => {?}
-
+\func lemma {A : \Type} (xs : List A) {dec : DecEq A} : Result A xs \elim xs
+  | nil => empty idp
+  | cons a xs => \case (lemma xs {dec}) \with {
+    | empty = => repeated 1 a (pmap (cons a) =)
+    | repeated n a' p =>  \case (dec a a') \with {
+      | yes p1 => repeated (suc n) a (pmap (\lam x => cons a x) p *> pmap (\lam x => cons a (repeat n x)) (sym p1))
+      | no p1 => A-is-not-trivial a a' p1
+    }
+    | A-is-not-trivial a a' p => A-is-not-trivial a a' p
+  }
 -- 14. Определите view, представляющий число в виде частного и остатка от деления его на произвольное (неотрицательное) число m.
 --    Реализуйте функцию деления.
 
@@ -131,11 +161,30 @@
 
 -- 15. Докажите, что функции FromBoolToDec и FromDecToBool взаимно обратны.
 
-\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p => {?}
-
+\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p =>
+  funExt (\lam _ => Bool) (\lam a =>
+    \case (p a) \as b \return (
+      (\case (\case b \as b \return Decide (T b) \with {
+              | true => yes ()
+              | false => no absurd }) \with {
+        | no _ => false
+        | yes _ => true
+      }) = b) \with {
+      | true => idp
+      | false => idp
+    })
 -- Мы не можем доказать, что FromBoolToDec (FromDecToBool P) = P, но мы можем доказать более слабое утверждение: эти предикаты логически эквивалентны.
 -- Для этого введем эквивалентность предикатов.
 
 \func dbd {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P))
-  : \Pi (x : A) -> (FromBoolToDec (FromDecToBool P)).1 x <-> P.1 x
-  => {?}
+  : \Pi (x : A) -> (FromBoolToDec (FromDecToBool P)).1 x <-> P.1 x =>
+  \lam x =>
+  \case P.2 x \as a, idp : P.2 x = a \return T
+      (\case a \with {
+        | yes _ => true
+        | no _ => false
+      }) <-> P.1 x
+    \with {
+      | yes a, _ => (\lam _ => a, \lam z => ())
+      | no n, _ => (\lam z => absurd z, \lam z => n z)
+    }
