@@ -209,7 +209,7 @@
 \func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x =>
   \case \elim x, f true \as p, idp : f true = p, f false \with {
     | true, true, ft, _ => pmap (\lam x => f (f x)) ft *> pmap f ft
-    | true, false, ft, q => pmap (\lam x => {?}) *> pmap f ft
+    | true, false, ft, q => {?}
     | false, p, ft, q => {?}
   }
 
